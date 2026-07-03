@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AXION — AI Assistant</title>
+<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#07090a;
+    --panel:#0e1311;
+    --panel-glass:rgba(20,26,23,0.55);
+    --border:rgba(150,255,200,0.10);
+    --border-strong:rgba(150,255,200,0.22);
+    --text:#eef2f0;
+    --text-dim:#8fa39a;
+    --text-faint:#5b6a63;
+    --green:#33e08a;
+    --green-soft:#1c6b45;
+    --green-glow:rgba(51,224,138,0.35);
+    --danger:#ff6b6b;
+    --radius:14px;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+    --sans:'Inter', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:default;}
+  button{ font-family:inherit; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  button:focus{ outline:none; }
+  button:focus-visible{ outline:2px solid var(--green); outline-offset:2px; }
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(51,224,138,0.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 110%, rgba(51,224,138,0.05), transparent 60%),
+      var(--void);
+    color:var(--text);
+    font-family:var(--sans);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  ::selection{ background:var(--green-soft); color:#fff; }
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:rgba(150,255,200,0.15); border-radius:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+
+  /* ---------- HEADER ---------- */
+  header{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 22px;
+    border-bottom:1px solid var(--border);
+    background:var(--panel-glass);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    z-index:10;
+    flex-shrink:0;
+  }
+  header::after{
+    content:'';
+    position:absolute; left:0; right:0; bottom:-1px; height:1px;
+    background:linear-gradient(90deg, transparent, var(--green), transparent);
+    animation:scan 5s linear infinite;
+    opacity:0.7;
+  }
+  @keyframes scan{
+    0%{ transform:translateX(-100%); }
+    100%{ transform:translateX(100%); }
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:34px; height:34px; border-radius:9px;
+    border:1px solid var(--border-strong);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-weight:700; color:var(--green);
+    background:rgba(51,224,138,0.06);
+    box-shadow:0 0 18px -4px var(--green-glow);
+  }
+  .brand-text h1{
+    font-family:var(--mono); font-size:15px; letter-spacing:2px;
+    margin:0; font-weight:700; color:var(--text);
+  }
+  .brand-text h1 .cursor{
+    display:inline-block; width:8px; height:14px; background:var(--green);
+    margin-left:4px; vertical-align:-2px;
+    animation:blink 1.1s steps(1) infinite;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+  .brand-text p{
+    margin:2px 0 0; font-size:11px; color:var(--text-faint);
+    font-family:var(--mono); letter-spacing:0.5px;
+  }
+  .header-actions{ display:flex; align-items:center; gap:8px; }
+  .icon-btn{
+    width:38px; height:38px; border-radius:10px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.02);
+    color:var(--text-dim);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:all .18s ease;
+  }
+  .icon-btn:hover{ border-color:var(--border-strong); color:var(--text); background:rgba(51,224,138,0.06); }
+  .icon-btn svg{ width:17px; height:17px; }
+  .icon-btn.danger:hover{ color:var(--danger); border-color:rgba(255,107,107,0.35); background:rgba(255,107,107,0.06); }
+
+  /* ---------- CHAT ---------- */
+  main{
+    flex:1; overflow-y:auto; padding:28px 18px 10px;
+    display:flex; justify-content:center;
+  }
+  .chat-col{ width:100%; max-width:760px; display:flex; flex-direction:column; gap:18px; }
+
+  .empty-state{
+    margin:auto; text-align:center; color:var(--text-faint);
+    font-family:var(--mono); padding:60px 20px;
+  }
+  .empty-state .brand-mark{ margin:0 auto 18px; width:52px; height:52px; font-size:18px; }
+  .empty-state h2{ color:var(--text-dim); font-size:14px; font-weight:500; letter-spacing:1px; margin:0 0 6px; }
+  .empty-state p{ font-size:12px; margin:0; }
+
+  .msg{ display:flex; gap:12px; align-items:flex-start; animation:rise .25s ease; }
+  @keyframes rise{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+  .msg.user{ flex-direction:row-reverse; }
+  .avatar{
+    width:30px; height:30px; border-radius:8px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,0.03);
+    color:var(--text-dim);
+    margin-top:2px;
+  }
+  .avatar svg{ width:15px; height:15px; }
+  .msg.assistant .avatar{ color:var(--green); border-color:var(--border-strong); box-shadow:0 0 12px -4px var(--green-glow); }
+
+  .bubble-wrap{ max-width:78%; display:flex; flex-direction:column; gap:6px; }
+  .msg.user .bubble-wrap{ align-items:flex-end; }
+  .bubble{
+    padding:12px 15px; border-radius:var(--radius);
+    font-size:14.5px; line-height:1.6; white-space:pre-wrap; word-wrap:break-word;
+    border:1px solid var(--border);
+  }
+  .msg.assistant .bubble{
+    background:var(--panel-glass); backdrop-filter:blur(10px);
+    border-top-left-radius:4px; color:var(--text);
+  }
+  .msg.user .bubble{
+    background:linear-gradient(155deg, rgba(51,224,138,0.14), rgba(51,224,138,0.05));
+    border-color:rgba(51,224,138,0.25);
+    border-top-right-radius:4px;
+  }
+  .bubble.error{ border-color:rgba(255,107,107,0.4); color:#ffb3b3; background:rgba(255,107,107,0.06); }
+  .bubble.status{ color:var(--text-dim); font-family:var(--mono); font-size:12.5px; display:flex; align-items:center; gap:8px; }
+  .dot-flow{ display:inline-flex; gap:3px; }
+  .dot-flow span{ width:5px; height:5px; border-radius:50%; background:var(--green); animation:dotf 1s infinite ease-in-out; }
+  .dot-flow span:nth-child(2){ animation-delay:.15s; }
+  .dot-flow span:nth-child(3){ animation-delay:.3s; }
+  @keyframes dotf{ 0%,80%,100%{ opacity:.25; transform:scale(0.8);} 40%{ opacity:1; transform:scale(1);} }
+
+  .bubble img.attach-thumb{ max-width:220px; border-radius:10px; display:block; margin-bottom:8px; border:1px solid var(--border); }
+  .bubble pre{
+    background:#050706; border:1px solid var(--border); border-radius:10px;
+    padding:12px 14px; overflow-x:auto; margin:8px 0; position:relative;
+  }
+  .bubble code{ font-family:var(--mono); font-size:13px; color:#c9f7de; }
+  .bubble :not(pre)>code{ background:rgba(51,224,138,0.1); padding:1px 6px; border-radius:5px; color:var(--green); }
+  .copy-code{
+    position:absolute; top:6px; right:6px; font-family:var(--mono); font-size:10px;
+    color:var(--text-faint); background:rgba(255,255,255,0.04); border:1px solid var(--border);
+    border-radius:6px; padding:3px 8px; cursor:pointer;
+  }
+  .copy-code:hover{ color:var(--green); border-color:var(--border-strong); }
+  .msg-time{ font-size:10px; color:var(--text-faint); font-family:var(--mono); padding:0 4px; }
+
+  /* ---------- COMPOSER ---------- */
+  .composer-outer{ display:flex; justify-content:center; padding:14px 18px 20px; flex-shrink:0; }
+  .composer{
+    width:100%; max-width:760px;
+    border:1px solid var(--border); border-radius:18px;
+    background:var(--panel-glass); backdrop-filter:blur(16px);
+    padding:10px 10px 10px 14px;
+    display:flex; flex-direction:column; gap:8px;
+    transition:border-color .2s ease;
+  }
+  .composer:focus-within{ border-color:var(--border-strong); box-shadow:0 0 0 3px rgba(51,224,138,0.06); }
+  .preview-row{ display:flex; gap:8px; }
+  .preview-chip{
+    position:relative; width:52px; height:52px; border-radius:10px; overflow:hidden;
+    border:1px solid var(--border-strong);
+  }
+  .preview-chip img{ width:100%; height:100%; object-fit:cover; }
+  .preview-chip .rm{
+    position:absolute; top:2px; right:2px; width:16px; height:16px; border-radius:50%;
+    background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .preview-chip .rm svg{ width:9px; height:9px; color:#fff; }
+  .composer-row{ display:flex; align-items:flex-end; gap:8px; }
+  textarea#input{
+    flex:1; resize:none; background:transparent; border:none; outline:none;
+    color:var(--text); font-family:var(--sans); font-size:14.5px; line-height:1.5;
+    max-height:160px; padding:8px 2px;
+  }
+  textarea#input::placeholder{ color:var(--text-faint); }
+  .composer-tools{ display:flex; align-items:center; gap:6px; }
+  .tool-btn{
+    width:36px; height:36px; border-radius:10px; border:1px solid transparent;
+    background:transparent; color:var(--text-faint); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:all .18s ease;
+  }
+  .tool-btn svg{ width:16px; height:16px; }
+  .tool-btn:hover{ color:var(--text); background:rgba(255,255,255,0.04); }
+  .tool-btn.active{ color:var(--green); background:rgba(51,224,138,0.1); border-color:rgba(51,224,138,0.3); }
+  .send-btn{
+    width:38px; height:38px; border-radius:11px; border:1px solid var(--border-strong);
+    background:var(--green); color:#04150c; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .18s ease; flex-shrink:0;
+  }
+  .send-btn svg{ width:16px; height:16px; }
+  .send-btn:hover{ box-shadow:0 0 20px -3px var(--green-glow); transform:translateY(-1px); }
+  .send-btn:disabled{ opacity:0.35; cursor:not-allowed; transform:none; box-shadow:none; }
+  .hint-row{ display:flex; justify-content:space-between; padding:0 4px; }
+  .hint-row span{ font-size:10.5px; color:var(--text-faint); font-family:var(--mono); }
+
+  /* ---------- MODAL ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(4,6,5,0.7); backdrop-filter:blur(4px);
+    display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    width:100%; max-width:420px; background:var(--panel); border:1px solid var(--border-strong);
+    border-radius:16px; padding:22px; box-shadow:0 20px 60px -20px rgba(0,0,0,0.7);
+  }
+  .modal h3{ margin:0 0 4px; font-family:var(--mono); font-size:14px; letter-spacing:1px; color:var(--text); }
+  .modal .sub{ margin:0 0 20px; font-size:12px; color:var(--text-faint); }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:11px; color:var(--text-dim); margin-bottom:6px; font-family:var(--mono); letter-spacing:0.5px; }
+  .field-input{ position:relative; display:flex; align-items:center; }
+  .field-input input{
+    width:100%; background:rgba(255,255,255,0.03); border:1px solid var(--border);
+    border-radius:10px; padding:10px 38px 10px 12px; color:var(--text); font-size:13px;
+    font-family:var(--mono); outline:none; transition:border-color .18s ease;
+  }
+  .field-input input:focus{ border-color:var(--border-strong); }
+  .field-input .toggle-eye{
+    position:absolute; right:8px; width:24px; height:24px; display:flex; align-items:center; justify-content:center;
+    color:var(--text-faint); cursor:pointer;
+  }
+  .field-input .toggle-eye svg{ width:15px; height:15px; }
+  .field small{ display:block; margin-top:6px; font-size:10.5px; color:var(--text-faint); }
+  .field small a{ color:var(--green); text-decoration:none; }
+  .modal-actions{ display:flex; gap:10px; margin-top:18px; }
+  .btn{
+    flex:1; padding:11px; border-radius:10px; font-family:var(--mono); font-size:12.5px;
+    letter-spacing:0.5px; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text-dim);
+    transition:all .18s ease;
+  }
+  .btn:hover{ border-color:var(--border-strong); color:var(--text); }
+  .btn.primary{ background:var(--green); color:#04150c; border-color:var(--green); font-weight:600; }
+  .btn.primary:hover{ box-shadow:0 0 20px -3px var(--green-glow); }
+
+  @media (max-width:640px){
+    .bubble-wrap{ max-width:88%; }
+    header{ padding:12px 14px; }
+    .brand-text p{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">AX</div>
+    <div class="brand-text">
+      <h1>AXION<span class="cursor"></span></h1>
+      <p>qwen2.5-vl-72b · groq + openserp</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn danger" id="clearBtn" title="Bersihkan chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="chat-col" id="chatCol">
+    <div class="empty-state" id="emptyState">
+      <div class="brand-mark">AX</div>
+      <h2>MULAI PERCAKAPAN</h2>
+      <p>Tanya apa saja, lampirkan gambar, atau nyalakan pencarian web.</p>
+    </div>
+  </div>
+</main>
+
+<div class="composer-outer">
+  <form class="composer" id="composerForm">
+    <div class="preview-row" id="previewRow" style="display:none;"></div>
+    <div class="composer-row">
+      <textarea id="input" rows="1" placeholder="Tulis pesan... (Enter untuk kirim, Shift+Enter baris baru)"></textarea>
+    </div>
+    <div class="composer-row" style="justify-content:space-between;">
+      <div class="composer-tools">
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <button type="button" class="tool-btn" id="attachBtn" title="Lampirkan gambar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <button type="button" class="tool-btn" id="searchToggle" title="Pencarian web (OpenSERP)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </button>
+      </div>
+      <button type="submit" class="send-btn" id="sendBtn" title="Kirim">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+      </button>
+    </div>
+    <div class="hint-row">
+      <span id="statusHint">axion siap</span>
+      <span id="searchHint">pencarian web: nonaktif</span>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ====== ISI KONFIGURASI KAMU DI SINI ======
+  const CONFIG = {
+    GROQ_API_KEY: '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',        // dari console.groq.com/keys
+    OPENSERP_URL: 'https://ixionai.vercel.app' // URL deploy OpenSERP kamu di Vercel
+  };
+  // ===========================================
+
+  const state = {
+    searchEnabled: false,
+    attachedImage: null,
+    messages: JSON.parse(localStorage.getItem('axion_history') || '[]')
+  };
+
+  const chatCol = document.getElementById('chatCol');
+  const emptyState = document.getElementById('emptyState');
+  const main = document.querySelector('main');
+  const form = document.getElementById('composerForm');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
+  const attachBtn = document.getElementById('attachBtn');
+  const fileInput = document.getElementById('fileInput');
+  const previewRow = document.getElementById('previewRow');
+  const searchToggle = document.getElementById('searchToggle');
+  const statusHint = document.getElementById('statusHint');
+  const searchHint = document.getElementById('searchHint');
+  const clearBtn = document.getElementById('clearBtn');
+
+  const ICON_USER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+  const ICON_BOT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4"/><circle cx="8" cy="4" r="1"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg>';
+  const ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
+  function updateHints(){
+    searchHint.textContent = 'pencarian web: ' + (state.searchEnabled ? 'aktif' : 'nonaktif');
+    searchToggle.classList.toggle('active', state.searchEnabled);
+  }
+
+  searchToggle.addEventListener('click', ()=>{
+    state.searchEnabled = !state.searchEnabled;
+    updateHints();
+  });
+
+  attachBtn.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', ()=>{
+    const file = fileInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      state.attachedImage = reader.result;
+      renderPreview();
+    };
+    reader.readAsDataURL(file);
+    fileInput.value = '';
+  });
+
+  function renderPreview(){
+    if(!state.attachedImage){
+      previewRow.style.display = 'none';
+      previewRow.innerHTML = '';
+      return;
+    }
+    previewRow.style.display = 'flex';
+    previewRow.innerHTML =
+      '<div class="preview-chip">' +
+        '<img src="' + state.attachedImage + '">' +
+        '<div class="rm" id="removeImgBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>' +
+      '</div>';
+    document.getElementById('removeImgBtn').addEventListener('click', ()=>{
+      state.attachedImage = null;
+      renderPreview();
+    });
+  }
+
+  input.addEventListener('input', ()=>{
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+  });
+  input.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  function escapeHtml(str){
+    return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function formatContent(raw){
+    let text = escapeHtml(raw);
+    text = text.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code)=>{
+      return '<pre><span class="copy-code">salin</span><code>' + code.replace(/\n$/,'') + '</code></pre>';
+    });
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    return text;
+  }
+
+  function scrollBottom(){
+    main.scrollTop = main.scrollHeight;
+  }
+
+  function saveHistory(){
+    // Simpan histori tanpa payload gambar besar agar localStorage tidak penuh
+    const trimmed = state.messages.map(m=>{
+      if(Array.isArray(m.content)){
+        const textPart = m.content.find(c=>c.type==='text');
+        return { role:m.role, content: (textPart ? textPart.text : '') + ' [gambar terlampir]' };
+      }
+      return m;
+    });
+    try{ localStorage.setItem('axion_history', JSON.stringify(trimmed.slice(-40))); }catch(e){}
+  }
+
+  function renderMessage(role, displayText, opts){
+    opts = opts || {};
+    emptyState.style.display = 'none';
+    const wrap = document.createElement('div');
+    wrap.className = 'msg ' + role;
+    const time = new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+    wrap.innerHTML =
+      '<div class="avatar">' + (role === 'user' ? ICON_USER : ICON_BOT) + '</div>' +
+      '<div class="bubble-wrap">' +
+        '<div class="bubble' + (opts.error ? ' error' : '') + (opts.status ? ' status' : '') + '">' +
+          (opts.imageUrl ? '<img class="attach-thumb" src="' + opts.imageUrl + '">' : '') +
+          (opts.status ? '<span class="dot-flow"><span></span><span></span><span></span></span><span class="status-text">' + displayText + '</span>' : formatContent(displayText)) +
+        '</div>' +
+        (opts.status ? '' : '<span class="msg-time">' + time + '</span>') +
+      '</div>';
+    chatCol.appendChild(wrap);
+    scrollBottom();
+    return wrap;
+  }
+
+  chatCol.addEventListener('click', (e)=>{
+    if(e.target.classList.contains('copy-code')){
+      const code = e.target.parentElement.querySelector('code').innerText;
+      navigator.clipboard.writeText(code).then(()=>{
+        e.target.textContent = 'tersalin';
+        setTimeout(()=> e.target.textContent = 'salin', 1200);
+      });
+    }
+  });
+
+  async function openserpSearch(query){
+    const base = CONFIG.OPENSERP_URL.replace(/\/+$/,'');
+    const url = base + '/google/search?text=' + encodeURIComponent(query) + '&limit=5&lang=id';
+    const res = await fetch(url, { method: 'GET' });
+    if(!res.ok){
+      const t = await res.text();
+      throw new Error('OpenSERP error ' + res.status + ': ' + t.slice(0,180));
+    }
+    const data = await res.json();
+    if(!Array.isArray(data) || data.length === 0) return '';
+    let ctx = '';
+    data.forEach((r, i)=>{
+      const title = r.Title || r.title || '(tanpa judul)';
+      const link = r.Link || r.link || r.URL || r.url || '';
+      const desc = r.Description || r.description || r.Snippet || r.snippet || '';
+      ctx += (i+1) + '. ' + title + ' (' + link + ')\n' + desc + '\n\n';
+    });
+    return ctx.trim();
+  }
+
+  async function streamGroq(messages, onDelta){
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + CONFIG.GROQ_API_KEY
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 2048,
+        stream: true
+      })
+    });
+    if(!res.ok){
+      const t = await res.text();
+      throw new Error('Groq error ' + res.status + ': ' + t.slice(0,180));
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let full = '';
+    while(true){
+      const { done, value } = await reader.read();
+      if(done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for(const line of lines){
+        const trimmed = line.trim();
+        if(!trimmed.startsWith('data:')) continue;
+        const data = trimmed.slice(5).trim();
+        if(data === '[DONE]') continue;
+        try{
+          const json = JSON.parse(data);
+          const delta = json.choices && json.choices[0] && json.choices[0].delta ? json.choices[0].delta.content : null;
+          if(delta){
+            full += delta;
+            onDelta(full);
+          }
+        }catch(err){ /* abaikan chunk parsial */ }
+      }
+    }
+    return full;
+  }
+
+  function buildApiMessages(searchContext){
+    const sys = {
+      role: 'system',
+      content: 'Kamu adalah AXION, asisten AI yang presisi, ringkas, dan membantu. Jawab dalam bahasa yang sama dengan pengguna. Gunakan format markdown ringan (code block, bold) bila relevan.' +
+        (searchContext ? '\n\nBerikut hasil pencarian web terbaru yang relevan dengan pertanyaan pengguna, gunakan sebagai referensi dan sebutkan sumber secara singkat bila dipakai:\n\n' + searchContext : '')
+    };
+    const history = state.messages.map(m=>({ role: m.role, content: m.content }));
+    return [sys, ...history];
+  }
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const text = input.value.trim();
+    if(!text && !state.attachedImage) return;
+
+    if(!CONFIG.GROQ_API_KEY || CONFIG.GROQ_API_KEY === 'PASTE_GROQ_API_KEY_DI_SINI'){
+      renderMessage('assistant', 'GROQ_API_KEY belum diisi di dalam script (cari CONFIG di bagian atas <script>).', { error:true });
+      return;
+    }
+
+    const imageUrl = state.attachedImage;
+    const userContent = imageUrl
+      ? [{ type:'text', text: text || 'Jelaskan gambar ini.' }, { type:'image_url', image_url:{ url: imageUrl } }]
+      : text;
+
+    renderMessage('user', text || '(gambar terlampir)', { imageUrl: imageUrl });
+    state.messages.push({ role:'user', content: userContent });
+    saveHistory();
+
+    input.value = '';
+    input.style.height = 'auto';
+    state.attachedImage = null;
+    renderPreview();
+    sendBtn.disabled = true;
+
+    let searchContext = '';
+    if(state.searchEnabled){
+      if(!CONFIG.OPENSERP_URL || CONFIG.OPENSERP_URL.indexOf('nama-project-kamu') !== -1){
+        renderMessage('assistant', 'OPENSERP_URL belum diisi di dalam script, pencarian web dilewati.', { error:true });
+      } else {
+      const statusEl = renderMessage('assistant', 'mencari di web...', { status:true });
+      try{
+        searchContext = await openserpSearch(text);
+        statusEl.remove();
+      }catch(err){
+        statusEl.querySelector('.status-text').textContent = 'pencarian web gagal, lanjut tanpa konteks web.';
+        statusEl.querySelector('.dot-flow').remove();
+        setTimeout(()=> statusEl.remove(), 1800);
+      }
+      }
+    }
+
+    const assistantWrap = renderMessage('assistant', '', {});
+    const bubble = assistantWrap.querySelector('.bubble');
+    bubble.innerHTML = '<span class="dot-flow"><span></span><span></span><span></span></span>';
+
+    try{
+      const apiMessages = buildApiMessages(searchContext);
+      let started = false;
+      const fullText = await streamGroq(apiMessages, (partial)=>{
+        if(!started){ bubble.innerHTML = ''; started = true; }
+        bubble.innerHTML = formatContent(partial);
+        scrollBottom();
+      });
+      if(!fullText){
+        bubble.innerHTML = formatContent('(tidak ada respons)');
+      }
+      state.messages.push({ role:'assistant', content: fullText || '' });
+      saveHistory();
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'msg-time';
+      timeSpan.textContent = new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+      assistantWrap.querySelector('.bubble-wrap').appendChild(timeSpan);
+    }catch(err){
+      bubble.classList.add('error');
+      bubble.innerHTML = formatContent('Gagal menghubungi Groq: ' + err.message);
+    }finally{
+      sendBtn.disabled = false;
+      scrollBottom();
+    }
+  });
+
+  clearBtn.addEventListener('click', ()=>{
+    state.messages = [];
+    localStorage.removeItem('axion_history');
+    chatCol.innerHTML = '';
+    chatCol.appendChild(emptyState);
+    emptyState.style.display = 'block';
+  });
+
+  function restoreHistory(){
+    if(state.messages.length === 0) return;
+    emptyState.style.display = 'none';
+    state.messages.forEach(m=>{
+      const content = Array.isArray(m.content) ? (m.content.find(c=>c.type==='text')||{}).text || '' : m.content;
+      renderMessage(m.role, content, {});
+    });
+  }
+
+  updateHints();
+  restoreHistory();
+})();
+</script>
+</body>
+</html>
